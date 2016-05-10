@@ -22,6 +22,10 @@ public:
 	void updatePhysX(float _deltaTime);
 	void cleanUpPhysX();
 
+	void addPlane();
+
+	void addBox();
+
 	void setUpVisualDebugger();
 
 	void renderGizmos(PxScene* physics_scene);
@@ -43,6 +47,20 @@ public:
 	PxCooking* g_PhysicsCooker;
 };
 
-
+class MyAllocator : public PxAllocatorCallback
+{
+public:
+	MyAllocator() {}
+	virtual ~MyAllocator() {}
+	virtual void* allocate(size_t size, const char* typeName, const char* filename, int line)
+	{
+		void* pointer = _aligned_malloc(size, 16);
+		return pointer;
+	}
+	virtual void deallocate(void* ptr)
+	{
+		_aligned_free(ptr);
+	}
+};
 
 #endif //CAM_PROJ_H_

@@ -27,6 +27,11 @@ bool Physics::startup()
 
 	m_renderer = new Renderer();
 	
+	Physics::setUpPhysX();
+	Physics::setUpVisualDebugger();
+	Physics::addPlane();
+	Physics::addBox();
+
     return true;
 }
 
@@ -87,6 +92,22 @@ void Physics::cleanUpPhysX()
 	g_PhysicsFoundation->release();
 }
 
+void Physics::addPlane()
+{
+	PxTransform pose = PxTransform(PxVec3(0.0f, 0, 0.0f), PxQuat(PxHalfPi * 1.0f, PxVec3(0.0f, 0.0f, 1.0f)));
+	PxRigidStatic* plane = PxCreateStatic(*g_Physics, pose, PxPlaneGeometry(), *g_PhysicsMaterial);
+	g_PhysicsScene->addActor(*plane);
+}
+
+void Physics::addBox()
+{
+	float density = 10.0f;
+	PxBoxGeometry box(2, 2, 2);
+	PxTransform transform(PxVec3(0, 10, 0));
+	PxRigidDynamic* dynamicActor = PxCreateDynamic(*g_Physics, transform, box, *g_PhysicsMaterial, density);
+	g_PhysicsScene->addActor(*dynamicActor);
+}
+
 bool Physics::update()
 {
     if (Application::update() == false)
@@ -113,6 +134,7 @@ bool Physics::update()
 
     m_camera.update(1.0f / 60.0f);
 
+	Physics::updatePhysX(dt);
 
     return true;
 }
@@ -232,18 +254,3 @@ void Physics::renderGizmos(PxScene* physics_scene)
         delete[] links;
     }
 }
-
-class MyAllocator : public PxAllocatorCallback
-{
-public:
-	virtual ~MyAllocator() {}
-	virtual void* allocate(size_t size, const char* typeName, const char* filename, int line)
-	{
-		void* pointer = _aligned_malloc(size, 16);
-		return pointer;
-	}
-	virtual void deallocate(void* ptr)
-	{
-		_aligned_free(ptr);
-	}
-};
