@@ -12,7 +12,7 @@ DIYRigidBody::DIYRigidBody(glm::vec3 _position, glm::vec3 _velocity, glm::quat _
 {
 }
 
-void DIYRigidBody::Update(glm::vec2 _gravity, float _timeStep)
+void DIYRigidBody::Update(glm::vec3 _gravity, float _timeStep)
 {
 }
 
@@ -36,4 +36,5 @@ SphereClass::SphereClass(glm::vec3 _position, glm::vec3 _velocity, float _mass, 
 
 void SphereClass::MakeGizmo()
 {
+	Gizmos::addSphere(this->m_Position, this->m_Radius, 10, 10, glm::vec4(1, 0, 0, 1));
 }

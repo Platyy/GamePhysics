@@ -32,7 +32,26 @@ bool Physics::startup()
 	Physics::addPlane();
 	Physics::addBox();
 
+	Physics::PhysSetup();
+
+
+	m_LastFrameTime = (float)glfwGetTime();
     return true;
+}
+
+void Physics::PhysSetup()
+{
+	m_PhysScene = new PhysicScene();
+	m_PhysScene->m_Gravity = glm::vec3(0, -10, 0);
+	m_PhysScene->m_TimeStep = 0.001f;
+
+	SphereClass *_ball;
+	_ball = new SphereClass(glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), 3.0f, 1.0f, glm::vec4(1, 0, 0, 1));
+	_ball->m_Radius = 1.0f;
+	_ball->m_Velocity = glm::vec3(3, 0, 0);
+	m_PhysScene->AddActor(_ball);
+	m_PhysScene->AddGizmos();
+
 }
 
 void Physics::shutdown()
@@ -70,6 +89,8 @@ void Physics::setUpPhysX()
 	sceneDesc.filterShader = &physx::PxDefaultSimulationFilterShader;
 	sceneDesc.cpuDispatcher = PxDefaultCpuDispatcherCreate(1);
 	g_PhysicsScene = g_Physics->createScene(sceneDesc);
+
+	
 }
 
 void Physics::updatePhysX(float _deltaTime)
@@ -117,9 +138,13 @@ bool Physics::update()
 
     Gizmos::clear();
 
-    float dt = (float)glfwGetTime();
-    m_delta_time = dt;
-    glfwSetTime(0.0);
+    float currentTime = (float)glfwGetTime();
+	float dt = currentTime - m_LastFrameTime;
+	m_LastFrameTime = currentTime;
+    //glfwSetTime(0.0);
+	
+	m_PhysScene->Update(dt);
+	m_PhysScene->AddGizmos();
 
     vec4 white(1);
     vec4 black(0, 0, 0, 1);
@@ -144,7 +169,7 @@ void Physics::draw()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_CULL_FACE);
     Gizmos::draw(m_camera.proj, m_camera.view);
-
+	
     m_renderer->RenderAndClear(m_camera.view_proj);
 
     glfwSwapBuffers(m_window);

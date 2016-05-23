@@ -4,6 +4,7 @@
 #include "Application.h"
 #include "Camera.h"
 #include "Render.h"
+#include "PhysicScene.h"
 
 #include <PxPhysicsAPI.h>
 #include <PxScene.h>
@@ -13,7 +14,10 @@ using namespace physx;
 class Physics : public Application
 {
 public:
+	PhysicScene* m_PhysScene;
+
 	virtual bool startup();
+	void PhysSetup();
 	virtual void shutdown();
     virtual bool update();
     virtual void draw();
@@ -33,7 +37,7 @@ public:
     Renderer* m_renderer;
     FlyCamera m_camera;
     float m_delta_time;
-
+	float m_LastFrameTime;
 
 
 	PxFoundation* g_PhysicsFoundation;
