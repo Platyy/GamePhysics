@@ -37,6 +37,16 @@ void Camera::setPosition(vec3 pos)
 	updateViewProj();
 }
 
+const vec3 Camera::GetPosition()
+{
+	return world[3].xyz;
+}
+
+const vec3 Camera::GetForward()
+{
+	return world[2].xyz * -1;
+}
+
 vec3 Camera::pickAgainstPlane(float x, float y, vec4 plane)
 {
     float nxPos = x / 1280.0f; //replace these with your screen width and height

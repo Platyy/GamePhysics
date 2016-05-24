@@ -17,7 +17,7 @@ public:
 	ShapeType m_ShapeID;
 	void virtual Update(glm::vec3 _gravity, float _timeStep) = 0;
 	void virtual Draw() {};
-	void virtual Debug() = 0;
+	void Debug();
 	void virtual MakeGizmo() = 0;
 	void virtual ResetPosition() {};
 };
@@ -29,6 +29,7 @@ public:
 
 	glm::vec3 m_Position;
 	glm::vec3 m_Velocity;
+	glm::vec3 m_Acceleration;
 
 	float m_Mass;
 	float m_Rotation2D;
@@ -50,4 +51,17 @@ public:
 
 	virtual void MakeGizmo();
 
+};
+
+class PlaneClass : public PhysicsObject
+{
+public:
+	glm::vec3 m_Normal;
+	float m_Distance;
+
+	void virtual Update(glm::vec3 _gravity, float _deltaTime);
+	void virtual MakeGizmo();
+
+	PlaneClass(glm::vec3 _normal, float _distance);
+	PlaneClass();
 };

@@ -34,6 +34,10 @@ public:
 
 	void renderGizmos(PxScene* physics_scene);
 
+	void CreateSphere(float _launchSpeed);
+
+	bool m_IsPressed = false;
+
     Renderer* m_renderer;
     FlyCamera m_camera;
     float m_delta_time;

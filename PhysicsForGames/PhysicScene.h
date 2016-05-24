@@ -18,10 +18,13 @@ public:
 
 	std::vector<PhysicsObject* > m_Actors;
 	
+	void CheckForCollisions();
+
 	void AddActor(PhysicsObject* _physObj);
 	void RemoveActor(PhysicsObject* _physObj);
 	void Update(float _dt);
 	void DebugScene();
 	void AddGizmos();
 };
+
 

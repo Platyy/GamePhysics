@@ -33,7 +33,9 @@ bool Physics::startup()
 	Physics::addBox();
 
 	Physics::PhysSetup();
-
+	PlaneClass* _plane = new PlaneClass(glm::vec3(0, 1, 0), -0.1f);
+	m_PhysScene->AddActor(_plane);
+	_plane->MakeGizmo();
 
 	m_LastFrameTime = (float)glfwGetTime();
     return true;
@@ -45,13 +47,7 @@ void Physics::PhysSetup()
 	m_PhysScene->m_Gravity = glm::vec3(0, -10, 0);
 	m_PhysScene->m_TimeStep = 0.001f;
 
-	SphereClass *_ball;
-	_ball = new SphereClass(glm::vec3(0, 0, 0), glm::vec3(0, 0, 0), 3.0f, 1.0f, glm::vec4(1, 0, 0, 1));
-	_ball->m_Radius = 1.0f;
-	_ball->m_Velocity = glm::vec3(3, 0, 0);
-	m_PhysScene->AddActor(_ball);
 	m_PhysScene->AddGizmos();
-
 }
 
 void Physics::shutdown()
@@ -118,7 +114,7 @@ void Physics::addPlane()
 	PxTransform pose = PxTransform(PxVec3(0.0f, 0, 0.0f), PxQuat(PxHalfPi * 1.0f, PxVec3(0.0f, 0.0f, 1.0f)));
 	PxRigidStatic* plane = PxCreateStatic(*g_Physics, pose, PxPlaneGeometry(), *g_PhysicsMaterial);
 	g_PhysicsScene->addActor(*plane);
-}
+}  // PhysX
 
 void Physics::addBox()
 {
@@ -127,7 +123,7 @@ void Physics::addBox()
 	PxTransform transform(PxVec3(0, 10, 0));
 	PxRigidDynamic* dynamicActor = PxCreateDynamic(*g_Physics, transform, box, *g_PhysicsMaterial, density);
 	g_PhysicsScene->addActor(*dynamicActor);
-}
+} // PhysX
 
 bool Physics::update()
 {
@@ -143,6 +139,8 @@ bool Physics::update()
 	m_LastFrameTime = currentTime;
     //glfwSetTime(0.0);
 	
+	CreateSphere(10.0f);
+
 	m_PhysScene->Update(dt);
 	m_PhysScene->AddGizmos();
 
@@ -160,7 +158,10 @@ bool Physics::update()
     m_camera.update(1.0f / 60.0f);
 
 	Physics::updatePhysX(dt);
-
+	if (glfwGetKey(m_window, GLFW_KEY_F) != GLFW_PRESS)
+	{
+		m_IsPressed = false;
+	}
     return true;
 }
 
@@ -278,4 +279,15 @@ void Physics::renderGizmos(PxScene* physics_scene)
         }
         delete[] links;
     }
+}
+
+void Physics::CreateSphere(float _launchSpeed)
+{
+	if (glfwGetKey(m_window, GLFW_KEY_F) == GLFW_PRESS && !m_IsPressed)
+	{
+		SphereClass *_ball = new SphereClass(m_camera.GetPosition() + m_camera.GetForward(), m_camera.GetForward() * _launchSpeed, 3.0f, 1.0f, glm::vec4(1, 0, 0, 1));
+		_ball->m_Radius = 1.0f;
+		m_PhysScene->AddActor(_ball);
+		m_IsPressed = true;
+	}
 }

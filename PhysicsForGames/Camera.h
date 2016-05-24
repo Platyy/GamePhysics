@@ -22,6 +22,10 @@ public:
 
 	virtual void update(float dt) = 0;
 
+
+	const vec3 GetPosition();
+	const vec3 GetForward();
+
     vec3 pickAgainstPlane(float x, float y, vec4 plane);
 
 	mat4 world;
