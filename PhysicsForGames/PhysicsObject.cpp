@@ -2,26 +2,48 @@
 
 
 //### PHYSICS OBJECT ###
-PhysicsObject::PhysicsObject()
+
+
+void PhysicsObject::Translate(glm::vec3 _positionDelta)
 {
+	m_Position += _positionDelta;
+}
+
+glm::vec3 PhysicsObject::GetPosition() const
+{
+	return m_Position;
+}
+
+glm::vec3 PhysicsObject::GetVelocity() const
+{
+	return m_Rigidbody == nullptr ? glm::vec3(0) : m_Rigidbody->GetVelocity();
+}
+
+float PhysicsObject::GetMass() const
+{
+	if (m_Rigidbody == nullptr)
+		return std::numeric_limits<float>::max();
+	else
+		return m_Rigidbody->GetMass();
+
+
 }
 
 //### RIGIDBODY ###
 
-DIYRigidBody::DIYRigidBody(glm::vec3 _position, glm::vec3 _velocity, glm::quat _rotation, float _mass)
+DIYRigidBody::DIYRigidBody(glm::vec3 _velocity, glm::quat _rotation, float _mass)
 {
-	m_Position = _position;
 	m_Velocity = _velocity;
 	m_Mass = _mass;
 }
 
-void DIYRigidBody::Update(glm::vec3 _gravity, float _timeStep)
+glm::vec3 DIYRigidBody::CalculateDeltaPosition(glm::vec3 _gravity, float _timeStep)
 {
 	m_Acceleration += _gravity;
 	m_Velocity += m_Acceleration * _timeStep;
-
-	m_Position += m_Velocity * _timeStep;
 	m_Acceleration = glm::vec3(0, 0, 0);
+
+	return m_Velocity * _timeStep;
 }
 
 void DIYRigidBody::Debug()
@@ -36,15 +58,31 @@ void DIYRigidBody::ApplyForceToActor(DIYRigidBody * _actor, glm::vec3 _force)
 {
 }
 
+void DIYRigidBody::AddVelocity(glm::vec3 _velocity)
+{
+	m_Velocity += _velocity;
+}
+
+void DIYRigidBody::AddMomentum(glm::vec3 _momentum)
+{
+	AddVelocity(_momentum / m_Mass);
+}
+
 //### SPHERE ###
 
-SphereClass::SphereClass(glm::vec3 _position, glm::vec3 _velocity, float _mass, float _radius, glm::vec4 _colour) : DIYRigidBody(_position, _velocity, glm::quat(), _mass)
+SphereClass::SphereClass(glm::vec3 _position, DIYRigidBody* _rigidbody, float _radius, glm::vec4 _colour) : PhysicsObject(_position, ShapeType::SPHERE, _rigidbody)
 {
 }
 
 void SphereClass::MakeGizmo()
 {
-	Gizmos::addSphere(this->m_Position, this->m_Radius, 10, 10, glm::vec4(1, 0, 0, 1));
+	
+	Gizmos::addSphere(m_Position, m_Radius, 10, 10, glm::vec4(1, 0, 0, 1));
+}
+
+float SphereClass::GetRadius()
+{
+	return m_Radius;
 }
 
 void PlaneClass::Update(glm::vec3 _gravity, float _deltaTime)
@@ -67,6 +105,7 @@ PlaneClass::PlaneClass(glm::vec3 _normal, float _distance)
 {
 	m_Normal = _normal;
 	m_Distance = _distance;
+	m_ShapeID = ShapeType::PLANE;
 }
 
 PlaneClass::PlaneClass()

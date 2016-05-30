@@ -285,7 +285,10 @@ void Physics::CreateSphere(float _launchSpeed)
 {
 	if (glfwGetKey(m_window, GLFW_KEY_F) == GLFW_PRESS && !m_IsPressed)
 	{
-		SphereClass *_ball = new SphereClass(m_camera.GetPosition() + m_camera.GetForward(), m_camera.GetForward() * _launchSpeed, 3.0f, 1.0f, glm::vec4(1, 0, 0, 1));
+		DIYRigidBody* _rigidbody = new DIYRigidBody(m_camera.GetForward() * _launchSpeed, glm::quat(), 1.0f);
+		SphereClass *_ball = new SphereClass(m_camera.GetPosition() + m_camera.GetForward(),
+			_rigidbody, 1.0f, glm::vec4(1, 0, 0, 1));
+
 		_ball->m_Radius = 1.0f;
 		m_PhysScene->AddActor(_ball);
 		m_IsPressed = true;
