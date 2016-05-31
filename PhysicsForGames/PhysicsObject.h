@@ -20,8 +20,6 @@ public:
 	glm::vec3 m_Velocity;
 	glm::vec3 m_Acceleration;
 
-
-
 	float m_Mass;
 
 	glm::vec3 GetVelocity() const { return m_Velocity; };
@@ -84,7 +82,18 @@ public:
 	SphereClass(glm::vec3 _position, DIYRigidBody * _rigidbody, float _radius, glm::vec4 _colour);
 
 	virtual void MakeGizmo();
-	float GetRadius();
+	float GetRadius() const { return m_Radius; }
+};
+
+class BoxClass : public PhysicsObject
+{
+public:
+	BoxClass(glm::vec3 _position, glm::vec3 _extents, DIYRigidBody* _rigidbody);
+	glm::vec3 GetExtents() const { return m_Extents; }
+
+	virtual void MakeGizmo();
+
+	glm::vec3 m_Extents;
 };
 
 class PlaneClass : public PhysicsObject

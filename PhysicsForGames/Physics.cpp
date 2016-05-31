@@ -140,6 +140,7 @@ bool Physics::update()
     //glfwSetTime(0.0);
 	
 	CreateSphere(10.0f);
+	CreateBox(10.0f);
 
 	m_PhysScene->Update(dt);
 	m_PhysScene->AddGizmos();
@@ -158,7 +159,7 @@ bool Physics::update()
     m_camera.update(1.0f / 60.0f);
 
 	Physics::updatePhysX(dt);
-	if (glfwGetKey(m_window, GLFW_KEY_F) != GLFW_PRESS)
+	if (glfwGetKey(m_window, GLFW_KEY_F) != GLFW_PRESS && glfwGetKey(m_window, GLFW_KEY_G) != GLFW_PRESS)
 	{
 		m_IsPressed = false;
 	}
@@ -291,6 +292,19 @@ void Physics::CreateSphere(float _launchSpeed)
 
 		_ball->m_Radius = 1.0f;
 		m_PhysScene->AddActor(_ball);
+		m_IsPressed = true;
+	}
+}
+
+void Physics::CreateBox(float _launchSpeed)
+{
+	if (glfwGetKey(m_window, GLFW_KEY_G) == GLFW_PRESS && !m_IsPressed)
+	{
+		DIYRigidBody* _rigidbody = new DIYRigidBody(m_camera.GetForward() * _launchSpeed, glm::quat(), 1.0f);
+		BoxClass *_box = new BoxClass(m_camera.GetPosition() + m_camera.GetForward(), glm::vec3(1), _rigidbody);
+
+		//_box->m_Extents = glm::vec3(1);
+		m_PhysScene->AddActor(_box);
 		m_IsPressed = true;
 	}
 }

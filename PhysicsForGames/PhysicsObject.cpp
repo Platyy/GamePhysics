@@ -76,14 +76,10 @@ SphereClass::SphereClass(glm::vec3 _position, DIYRigidBody* _rigidbody, float _r
 
 void SphereClass::MakeGizmo()
 {
-	
 	Gizmos::addSphere(m_Position, m_Radius, 10, 10, glm::vec4(1, 0, 0, 1));
 }
 
-float SphereClass::GetRadius()
-{
-	return m_Radius;
-}
+//### PLANE ###
 
 void PlaneClass::Update(glm::vec3 _gravity, float _deltaTime)
 {
@@ -110,4 +106,17 @@ PlaneClass::PlaneClass(glm::vec3 _normal, float _distance)
 
 PlaneClass::PlaneClass()
 {
+}
+
+//### BOX ###
+
+BoxClass::BoxClass(glm::vec3 _position, glm::vec3 _extents, DIYRigidBody * _rigidbody) 
+	: PhysicsObject(_position, ShapeType::BOX, _rigidbody), 
+	m_Extents(_extents)
+{
+}
+
+void BoxClass::MakeGizmo()
+{
+	Gizmos::addAABBFilled(m_Position, m_Extents, glm::vec4(0, 0.5f, 0, 1));
 }

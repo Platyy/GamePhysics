@@ -35,6 +35,7 @@ public:
 	void renderGizmos(PxScene* physics_scene);
 
 	void CreateSphere(float _launchSpeed);
+	void CreateBox(float _launchSpeed);
 
 	bool m_IsPressed = false;
 

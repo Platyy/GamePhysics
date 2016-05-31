@@ -2,6 +2,7 @@
 
 #include "glm\glm.hpp"
 #include <vector>
+#include <assert.h>
 #include "PhysicsObject.h"
 
 class PhysicScene
