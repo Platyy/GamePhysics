@@ -9,7 +9,15 @@ enum ShapeType
 	PLANE,
 	SPHERE,
 	BOX,
+	JOINT,
 	NUMBERSHAPE
+};
+
+enum PhysicsType
+{
+	STATIC,
+	DYNAMIC,
+	KINEMATIC
 };
 
 class DIYRigidBody
@@ -41,10 +49,11 @@ class PhysicsObject
 {
 public:
 	PhysicsObject() {};
-	PhysicsObject(glm::vec3 _initialPos, ShapeType _shape, DIYRigidBody* _rigidbody = nullptr) : m_Position(_initialPos), m_Rigidbody(_rigidbody), m_ShapeID(_shape)
+	PhysicsObject(glm::vec3 _initialPos, ShapeType _shape, PhysicsType _type, DIYRigidBody* _rigidbody = nullptr) : m_Position(_initialPos), m_Rigidbody(_rigidbody), m_ShapeID(_shape)
 	{}
 
 	ShapeType m_ShapeID;
+	PhysicsType m_PhysType;
 
 	void virtual Update(glm::vec3 _gravity, float _timeStep) {
 		if (m_Rigidbody != nullptr) {
@@ -59,18 +68,14 @@ public:
 	float PhysicsObject::GetMass() const;
 	glm::vec3 GetMomentum() const { return GetMass() * GetVelocity(); }
 
-
 	void AddVelocity(glm::vec3 _velocity) { if (m_Rigidbody != nullptr) m_Rigidbody->AddVelocity(_velocity); }
 	void AddMomentum(glm::vec3 _momentum) { if (m_Rigidbody != nullptr) m_Rigidbody->AddMomentum(_momentum); }
 	void Translate(glm::vec3 _positionDelta);
-
 
 	glm::vec3 GetPosition() const;
 
 	glm::vec3 m_Position;
 	
-
-
 	std::unique_ptr<DIYRigidBody> m_Rigidbody;
 };
 
@@ -109,4 +114,15 @@ public:
 
 	PlaneClass(glm::vec3 _normal, float _distance);
 	PlaneClass();
+};
+
+class SpringJoint : public PhysicsObject
+{
+public:
+	float m_RestLength, m_Damping, m_SpringCoefficient;
+	PhysicsObject* m_Connections[2];
+
+	SpringJoint(PhysicsObject* _connection1, PhysicsObject* _connection2, float _springCoefficient, float _restLength, float _damping, glm::vec3 _position, DIYRigidBody* _rigidbody);
+
+	virtual void Update(glm::vec3 _gravity, float _deltaTime);
 };

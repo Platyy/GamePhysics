@@ -11,9 +11,10 @@ PhysicScene::~PhysicScene()
 typedef bool(*fn) (PhysicsObject*, PhysicsObject*);
 static fn CollisionFunctionArray[] =
 {
-	PhysicScene::Plane2Plane, PhysicScene::Plane2Sphere, PhysicScene::Plane2Box,
-	PhysicScene::Sphere2Plane, PhysicScene::Sphere2Sphere, PhysicScene::Sphere2Box,
-	PhysicScene::Box2Plane, PhysicScene::Box2Sphere, PhysicScene::Box2Box
+	PhysicScene::Plane2Plane, PhysicScene::Plane2Sphere, PhysicScene::Plane2Box, PhysicScene::Plane2Joint,
+	PhysicScene::Sphere2Plane, PhysicScene::Sphere2Sphere, PhysicScene::Sphere2Box, PhysicScene::Sphere2Joint,
+	PhysicScene::Box2Plane, PhysicScene::Box2Sphere, PhysicScene::Box2Box, PhysicScene::Box2Joint,
+	PhysicScene::Joint2Plane, PhysicScene::Joint2Sphere, PhysicScene::Joint2Box, PhysicScene::Joint2Joint
 };
 
 void PhysicScene::CheckForCollisions()
@@ -68,7 +69,7 @@ void PhysicScene::CheckForCollisions()
 void PhysicScene::Response(PhysicsObject* pObject1, PhysicsObject* pObject2, float overlap, glm::vec3 normal)
 {
 	Separate(pObject1, pObject2, overlap, normal);
-	const float _coeffRestitution = 0.5f;
+	const float _coeffRestitution = 0.4f;
 	//float _impulse1 = -(1 + _coeffRestitution) * glm::dot(pObject1->GetMomentum(), normal);
 	//float _impulse2 = -(1 + _coeffRestitution) * glm::dot(pObject2->GetMomentum(), normal);
 	//
@@ -184,6 +185,11 @@ bool PhysicScene::Plane2Box(PhysicsObject * _planeObj, PhysicsObject * _boxObj)
 	return false;
 }
 
+bool PhysicScene::Plane2Joint(PhysicsObject * obj1, PhysicsObject * obj2)
+{
+	return false;
+}
+
 bool PhysicScene::Sphere2Plane(PhysicsObject * _sphereObj, PhysicsObject * _planeObj)
 {
 	return Plane2Sphere(_planeObj, _sphereObj);
@@ -241,10 +247,15 @@ bool PhysicScene::Sphere2Box(PhysicsObject * _sphereObj, PhysicsObject * _boxObj
 	float _overlap = glm::length(_clampedDist) - sphere->GetRadius();
 	if (_overlap < 0)
 	{
-		Response(_boxObj, _sphereObj, -_overlap,  glm::normalize(_dist));
+		Response(_boxObj, _sphereObj, -_overlap, glm::normalize(_dist)); // 
 		return true;
 	}
 
+	return false;
+}
+
+bool PhysicScene::Sphere2Joint(PhysicsObject * obj1, PhysicsObject * obj2)
+{
 	return false;
 }
 
@@ -297,5 +308,30 @@ bool PhysicScene::Box2Box(PhysicsObject * _boxObj1, PhysicsObject * _boxObj2)
 	}
 
 
+	return false;
+}
+
+bool PhysicScene::Box2Joint(PhysicsObject * obj1, PhysicsObject * obj2)
+{
+	return false;
+}
+
+bool PhysicScene::Joint2Plane(PhysicsObject * obj1, PhysicsObject * obj2)
+{
+	return false;
+}
+
+bool PhysicScene::Joint2Sphere(PhysicsObject * obj1, PhysicsObject * obj2)
+{
+	return false;
+}
+
+bool PhysicScene::Joint2Box(PhysicsObject * obj1, PhysicsObject * obj2)
+{
+	return false;
+}
+
+bool PhysicScene::Joint2Joint(PhysicsObject * obj1, PhysicsObject * obj2)
+{
 	return false;
 }

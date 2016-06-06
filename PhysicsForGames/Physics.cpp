@@ -286,12 +286,40 @@ void Physics::CreateSphere(float _launchSpeed)
 {
 	if (glfwGetKey(m_window, GLFW_KEY_F) == GLFW_PRESS && !m_IsPressed)
 	{
+		m_Thrown++;
 		DIYRigidBody* _rigidbody = new DIYRigidBody(m_camera.GetForward() * _launchSpeed, glm::quat(), 1.0f);
 		SphereClass *_ball = new SphereClass(m_camera.GetPosition() + m_camera.GetForward(),
 			_rigidbody, 1.0f, glm::vec4(1, 0, 0, 1));
 
 		_ball->m_Radius = 1.0f;
 		m_PhysScene->AddActor(_ball);
+
+		if(m_Thrown == 1)
+			m_Spheres[0] = _ball;
+		if (m_Thrown == 2)
+		{
+			m_Spheres[1] = _ball;
+			CreateJoint(m_Spheres[0], m_Spheres[1]);
+		}
+		if (m_Thrown == 3)
+		{
+			m_Spheres[2] = _ball;
+			CreateJoint(m_Spheres[1], m_Spheres[2]);
+		}
+		if (m_Thrown == 4)
+		{
+			m_Spheres[3] = _ball;
+			CreateJoint(m_Spheres[2], m_Spheres[3]);
+		}
+		if (m_Thrown == 5)
+		{
+			m_Spheres[4] = _ball;
+			CreateJoint(m_Spheres[3], m_Spheres[4]);
+			CreateJoint(m_Spheres[0], m_Spheres[4]);
+			m_Thrown = 0;
+		}
+
+
 		m_IsPressed = true;
 	}
 }
@@ -307,4 +335,11 @@ void Physics::CreateBox(float _launchSpeed)
 		m_PhysScene->AddActor(_box);
 		m_IsPressed = true;
 	}
+}
+
+void Physics::CreateJoint(PhysicsObject* _obj1, PhysicsObject* _obj2)
+{
+	DIYRigidBody* _rb = new DIYRigidBody(_obj1->GetVelocity(), glm::quat(), 1.0f);
+	SpringJoint *_joint = new SpringJoint(_obj1, _obj2, 20.0f, 5.0f, 0.25f, _obj1->GetPosition(), _rb);
+	m_PhysScene->AddActor(_joint);
 }

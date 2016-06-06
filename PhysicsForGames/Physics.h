@@ -37,12 +37,17 @@ public:
 	void CreateSphere(float _launchSpeed);
 	void CreateBox(float _launchSpeed);
 
+	void CreateJoint(PhysicsObject * _obj1, PhysicsObject * _obj2);
+
 	bool m_IsPressed = false;
 
     Renderer* m_renderer;
     FlyCamera m_camera;
     float m_delta_time;
 	float m_LastFrameTime;
+
+	SphereClass* m_Spheres[5];
+	int m_Thrown = 0;
 
 
 	PxFoundation* g_PhysicsFoundation;
