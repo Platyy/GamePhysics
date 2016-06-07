@@ -30,7 +30,7 @@ bool Physics::startup()
 	Physics::setUpPhysX();
 	Physics::setUpVisualDebugger();
 	Physics::addPlane();
-	Physics::addBox();
+	//Physics::addBox();
 
 	Physics::PhysSetup();
 	PlaneClass* _plane = new PlaneClass(glm::vec3(0, 1, 0), -0.1f);
@@ -86,7 +86,11 @@ void Physics::setUpPhysX()
 	sceneDesc.cpuDispatcher = PxDefaultCpuDispatcherCreate(1);
 	g_PhysicsScene = g_Physics->createScene(sceneDesc);
 
-	
+	Ragdoll* _ragdoll = new Ragdoll();
+	PxArticulation* _ragdollArticulation;
+	_ragdollArticulation = _ragdoll->MakeRagdoll(g_Physics, _ragdoll->ragdollData, PxTransform(PxVec3(0, 20, 0)), .1f, g_PhysicsMaterial);
+	g_PhysicsScene->addArticulation(*_ragdollArticulation);
+	_ragdollArticulation->putToSleep();
 }
 
 void Physics::updatePhysX(float _deltaTime)
@@ -95,6 +99,19 @@ void Physics::updatePhysX(float _deltaTime)
 		return;
 
 	g_PhysicsScene->simulate(_deltaTime);
+
+	if (glfwGetKey(m_window, GLFW_KEY_V) == GLFW_PRESS)
+	{
+		PxSphereGeometry _sphere(0.5f);
+		float _density = 10;
+		PxTransform _trans (PxVec3(m_camera.GetPosition().x, m_camera.GetPosition().y, m_camera.GetPosition().z));
+
+		PxRigidDynamic* _actor = PxCreateDynamic(*g_Physics, _trans, _sphere, *g_PhysicsMaterial, _density);
+		glm::vec3 _dir(-m_camera.world[2]);
+		PxVec3 _vel = PxVec3(_dir.x, _dir.y, _dir.z) * 2;
+		_actor->setLinearVelocity(_vel, true);
+		g_PhysicsScene->addActor(*_actor);
+	}
 
 	while (g_PhysicsScene->fetchResults() == false)
 	{
@@ -123,6 +140,9 @@ void Physics::addBox()
 	PxTransform transform(PxVec3(0, 10, 0));
 	PxRigidDynamic* dynamicActor = PxCreateDynamic(*g_Physics, transform, box, *g_PhysicsMaterial, density);
 	g_PhysicsScene->addActor(*dynamicActor);
+
+	PxRigidStatic* _staticActor = PxCreateStatic(*g_Physics, PxTransform(PxVec3(0, 2, 0)), box, *g_PhysicsMaterial);
+	g_PhysicsScene->addActor(*_staticActor);
 } // PhysX
 
 bool Physics::update()
@@ -159,6 +179,7 @@ bool Physics::update()
     m_camera.update(1.0f / 60.0f);
 
 	Physics::updatePhysX(dt);
+	renderGizmos(g_PhysicsScene);
 	if (glfwGetKey(m_window, GLFW_KEY_F) != GLFW_PRESS && glfwGetKey(m_window, GLFW_KEY_G) != GLFW_PRESS)
 	{
 		m_IsPressed = false;

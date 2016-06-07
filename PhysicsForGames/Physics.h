@@ -5,6 +5,7 @@
 #include "Camera.h"
 #include "Render.h"
 #include "PhysicScene.h"
+#include "Ragdoll.h"
 
 #include <PxPhysicsAPI.h>
 #include <PxScene.h>
