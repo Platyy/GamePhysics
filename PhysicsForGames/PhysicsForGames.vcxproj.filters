@@ -57,6 +57,9 @@
     <ClInclude Include="Ragdoll.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PhysXCloth.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Application.cpp">
@@ -93,6 +96,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Ragdoll.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PhysXCloth.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

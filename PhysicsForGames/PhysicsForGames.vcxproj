@@ -157,6 +157,7 @@
     <ClInclude Include="Physics.h" />
     <ClInclude Include="PhysicScene.h" />
     <ClInclude Include="PhysicsObject.h" />
+    <ClInclude Include="PhysXCloth.h" />
     <ClInclude Include="Ragdoll.h" />
     <ClInclude Include="Render.h" />
     <ClInclude Include="stb_image.h" />
@@ -173,6 +174,7 @@
     <ClCompile Include="Physics.cpp" />
     <ClCompile Include="PhysicScene.cpp" />
     <ClCompile Include="PhysicsObject.cpp" />
+    <ClCompile Include="PhysXCloth.cpp" />
     <ClCompile Include="Ragdoll.cpp" />
     <ClCompile Include="Renderer.cpp" />
   </ItemGroup>

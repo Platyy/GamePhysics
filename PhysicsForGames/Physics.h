@@ -11,6 +11,7 @@
 #include <PxScene.h>
 #include <pvd\PxVisualDebugger.h>
 
+#include "PhysXCloth.h"
 using namespace physx;
 class Physics : public Application
 {
@@ -60,6 +61,10 @@ public:
 	PxMaterial* g_PhysicsMaterial;
 	PxMaterial* g_boxMaterial;
 	PxCooking* g_PhysicsCooker;
+
+
+	PxCloth* CreateCloth(const glm::vec3 & _pos, unsigned int & _vertCount, unsigned int & _indexCount, const glm::vec3 * _verts, unsigned int * _indices);
+	PxCloth* m_Cloth;
 };
 
 class MyAllocator : public PxAllocatorCallback

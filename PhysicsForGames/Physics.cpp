@@ -28,7 +28,7 @@ bool Physics::startup()
 	m_renderer = new Renderer();
 	
 	Physics::setUpPhysX();
-	Physics::setUpVisualDebugger();
+	//Physics::setUpVisualDebugger();
 	Physics::addPlane();
 	//Physics::addBox();
 
@@ -91,6 +91,12 @@ void Physics::setUpPhysX()
 	_ragdollArticulation = _ragdoll->MakeRagdoll(g_Physics, _ragdoll->ragdollData, PxTransform(PxVec3(0, 20, 0)), .1f, g_PhysicsMaterial);
 	g_PhysicsScene->addArticulation(*_ragdollArticulation);
 	_ragdollArticulation->putToSleep();
+
+
+	//m_Cloth = CreateCloth(glm::vec3(0, 20, 0), 10, indicies);
+	//g_PhysicsScene->addActor(*m_Cloth);
+	//delete[] clothTexCoords;
+	//delete[] indicies;
 }
 
 void Physics::updatePhysX(float _deltaTime)
@@ -363,4 +369,56 @@ void Physics::CreateJoint(PhysicsObject* _obj1, PhysicsObject* _obj2)
 	DIYRigidBody* _rb = new DIYRigidBody(_obj1->GetVelocity(), glm::quat(), 1.0f);
 	SpringJoint *_joint = new SpringJoint(_obj1, _obj2, 20.0f, 5.0f, 0.25f, _obj1->GetPosition(), _rb);
 	m_PhysScene->AddActor(_joint);
+}
+
+PxCloth * Physics::CreateCloth(const glm::vec3 & _pos, unsigned int & _vertCount, unsigned int & _indexCount, const glm::vec3 * _verts, unsigned int * _indices)
+{
+	// set up the cloth description
+	PxClothMeshDesc clothDesc;
+	clothDesc.setToDefault();
+	clothDesc.points.count = _vertCount;
+	clothDesc.triangles.count = _indexCount / 3;
+	clothDesc.points.stride = sizeof(glm::vec3);
+	clothDesc.triangles.stride = sizeof(unsigned int) * 3;
+	clothDesc.points.data = _verts;
+	clothDesc.triangles.data = _indices;
+	// cook the geometry into fabric
+	MemoryOutputStream buf;
+	if (g_PhysicsCooker->cookClothFabric(clothDesc, PxVec3(0, -9.8f, 0), buf) == false)
+	{
+		return nullptr;
+	}
+	MemoryInputData data(buf.getData(), buf.getSize());
+	PxClothFabric* fabric = g_Physics->createClothFabric(data);
+	// set up the particles for each vertex
+	PxClothParticle* particles = new PxClothParticle[_vertCount];
+	for (unsigned int i = 0; i < _vertCount; ++i)
+	{
+		particles[i].pos = PxVec3(_verts[i].x, _verts[i].y, _verts[i].z);
+		// set weights (0 means static)
+		if (_verts[i].x == _pos.x)
+			particles[i].invWeight = 0;
+		else
+			particles[i].invWeight = 1.f;
+	}
+	// create the cloth then setup the spring properties
+	PxCloth* cloth = g_Physics->createCloth(PxTransform(PxVec3(_pos.x,
+		_pos.y, _pos.z)),
+		*fabric, particles, PxClothCollisionData(), PxClothFlag::eSWEPT_CONTACT);
+	// we need to set some solver configurations
+	if (cloth != nullptr)
+	{
+		PxClothPhaseSolverConfig bendCfg;
+		bendCfg.solverType = PxClothPhaseSolverConfig::eFAST;
+		bendCfg.stiffness = 1;
+		bendCfg.stretchStiffness = 0.5;
+		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eBENDING, bendCfg);
+		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eSTRETCHING, bendCfg);
+		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eSHEARING, bendCfg);
+		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eSTRETCHING_HORIZONTAL,
+			bendCfg);
+		cloth->setDampingCoefficient(0.125f);
+	}
+	delete[] particles;
+	return cloth;
 }
