@@ -152,14 +152,18 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Gizmos.h" />
     <ClInclude Include="gl_core_4_4.h" />
+    <ClInclude Include="MyControllerHitReport.h" />
     <ClInclude Include="ParticleEmitter.h" />
     <ClInclude Include="ParticleFluidEmitter.h" />
     <ClInclude Include="Physics.h" />
     <ClInclude Include="PhysicScene.h" />
     <ClInclude Include="PhysicsObject.h" />
     <ClInclude Include="PhysXCloth.h" />
+    <ClInclude Include="PlayerController.h" />
     <ClInclude Include="Ragdoll.h" />
     <ClInclude Include="Render.h" />
+    <ClInclude Include="RenderEngine.h" />
+    <ClInclude Include="ShaderLoader.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="tiny_obj_loader.h" />
   </ItemGroup>
@@ -169,14 +173,21 @@
     <ClCompile Include="Gizmos.cpp" />
     <ClCompile Include="gl_core_4_4.c" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MyControllerHitReport.cpp" />
     <ClCompile Include="ParticleEmitter.cpp" />
     <ClCompile Include="ParticleFluidEmitter.cpp" />
     <ClCompile Include="Physics.cpp" />
     <ClCompile Include="PhysicScene.cpp" />
     <ClCompile Include="PhysicsObject.cpp" />
     <ClCompile Include="PhysXCloth.cpp" />
+    <ClCompile Include="PlayerController.cpp" />
     <ClCompile Include="Ragdoll.cpp" />
+    <ClCompile Include="RenderEngine.cpp" />
     <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="ShaderLoader.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

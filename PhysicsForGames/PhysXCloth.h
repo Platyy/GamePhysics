@@ -4,6 +4,8 @@
 #include "glm\gtc\matrix_inverse.hpp"
 #include "glm\gtc\type_ptr.hpp"
 #include "Gizmos.h"
+#include "ShaderLoader.h"
+#include "Render.h"
 #include <PxPhysicsAPI.h>
 
 using namespace physx;
@@ -13,18 +15,16 @@ public:
 	PhysXCloth();
 	~PhysXCloth();
 
+	PxCloth* SetupCloth(PxPhysics * g_physics);
+
 	unsigned int m_ShaderID, m_TextureID;
 	unsigned int m_ClothIndexCount;
 	unsigned int m_ClothVertexCount;
-	unsigned int m_ClothVAO, m_ClothVBO, m_ClothTextureVBO, m_ClothIBO;	glm::vec3* m_ClothPositions;
+	unsigned int m_ClothVAO, m_ClothVBO, m_ClothTextureVBO, m_ClothIBO;
+
+	glm::vec3* m_ClothPositions;
 
 
-	void SetupCloth();
 	void Render(glm::mat4 _camMatrix, glm::mat4 _projMatrix);
-
-
-	PxCloth* _createCloth(const glm::vec3& _pos, unsigned int& _vertCount,
-		unsigned int& _indexCount, const glm::vec3* _verts, unsigned int* _indices);
-	PxCloth* m_Cloth;
 };
 

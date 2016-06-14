@@ -6,18 +6,23 @@
 #include "Render.h"
 #include "PhysicScene.h"
 #include "Ragdoll.h"
+#include "MyControllerHitReport.h"
 
+#include <streambuf>
 #include <PxPhysicsAPI.h>
 #include <PxScene.h>
 #include <pvd\PxVisualDebugger.h>
+#include <iostream>
 
 #include "PhysXCloth.h"
 using namespace physx;
 class Physics : public Application
 {
 public:
+	
 	PhysicScene* m_PhysScene;
-
+	PxCloth* m_Cloth;
+	PhysXCloth* m_MyCloth;
 	virtual bool startup();
 	void PhysSetup();
 	virtual void shutdown();
@@ -32,6 +37,8 @@ public:
 
 	void addBox();
 
+	void addCapsule();
+
 	void setUpVisualDebugger();
 
 	void renderGizmos(PxScene* physics_scene);
@@ -40,6 +47,8 @@ public:
 	void CreateBox(float _launchSpeed);
 
 	void CreateJoint(PhysicsObject * _obj1, PhysicsObject * _obj2);
+
+	void MakeCharController();
 
 	bool m_IsPressed = false;
 
@@ -62,9 +71,19 @@ public:
 	PxMaterial* g_boxMaterial;
 	PxCooking* g_PhysicsCooker;
 
+	PxControllerManager* g_CharManager;
+	PxController* g_PlayerController;
 
 	PxCloth* CreateCloth(const glm::vec3 & _pos, unsigned int & _vertCount, unsigned int & _indexCount, const glm::vec3 * _verts, unsigned int * _indices);
-	PxCloth* m_Cloth;
+
+	/* Character Controller */
+	MyControllerHitReport* m_HitReport;
+	float m_YVel, m_Rotation, m_Grav;
+	bool m_Grounded;
+	float m_MovSpeed = 10.0f;
+	float m_RotSpeed = 1.0f;
+
+	void UpdateChar(float _deltaTime);
 };
 
 class MyAllocator : public PxAllocatorCallback
@@ -82,5 +101,4 @@ public:
 		_aligned_free(ptr);
 	}
 };
-
 #endif //CAM_PROJ_H_

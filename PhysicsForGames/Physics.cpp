@@ -31,6 +31,8 @@ bool Physics::startup()
 	//Physics::setUpVisualDebugger();
 	Physics::addPlane();
 	//Physics::addBox();
+	Physics::addCapsule();
+
 
 	Physics::PhysSetup();
 	PlaneClass* _plane = new PlaneClass(glm::vec3(0, 1, 0), -0.1f);
@@ -92,7 +94,13 @@ void Physics::setUpPhysX()
 	g_PhysicsScene->addArticulation(*_ragdollArticulation);
 	_ragdollArticulation->putToSleep();
 
+	MakeCharController();
 
+
+	m_MyCloth = new PhysXCloth();
+	
+	m_Cloth = m_MyCloth->SetupCloth(g_Physics);
+	g_PhysicsScene->addActor(*m_Cloth);
 	//m_Cloth = CreateCloth(glm::vec3(0, 20, 0), 10, indicies);
 	//g_PhysicsScene->addActor(*m_Cloth);
 	//delete[] clothTexCoords;
@@ -151,6 +159,34 @@ void Physics::addBox()
 	g_PhysicsScene->addActor(*_staticActor);
 } // PhysX
 
+void Physics::addCapsule()
+{
+	PxCapsuleGeometry _caps(0.5f, 2.0f);
+
+	PxTransform _trans(PxVec3(10, 10, 0));
+
+	PxMat44 _m(_trans);
+	glm::mat4* _M = (glm::mat4*)(&_m);
+
+	glm::vec3 _position = glm::vec3(_trans.p.x, _trans.p.y, _trans.p.z);
+	glm::vec4 _axis(2.5f, 0, 0, 0);
+	_axis = (*_M) * _axis;
+
+	Gizmos::addSphere(_position + _axis.xyz(), 1.5f, 10, 10, glm::vec4(0, 1, 0, 1));
+	Gizmos::addSphere(_position - _axis.xyz(), 1.5f, 10, 10, glm::vec4(0, 1, 0, 1));
+
+	glm::mat4 m2 = glm::rotate(*_M, 11 / 7.0f, glm::vec3(0.0f, 0.0f, 1.0f));
+	Gizmos::addCylinderFilled(_position, 1.5f, 2.5f, 10, glm::vec4(0, 1, 0, 1), &m2);
+
+
+	float _density = 10;
+
+	PxRigidDynamic* _actor = PxCreateDynamic(*g_Physics, _trans, _caps, *g_PhysicsMaterial, _density);
+	glm::vec3 _dir(-m_camera.world[2]);
+	PxVec3 _vel = PxVec3(_dir.x, _dir.y, _dir.z) * 2;
+	g_PhysicsScene->addActor(*_actor);
+} // PhysX
+
 bool Physics::update()
 {
     if (Application::update() == false)
@@ -185,6 +221,7 @@ bool Physics::update()
     m_camera.update(1.0f / 60.0f);
 
 	Physics::updatePhysX(dt);
+	UpdateChar(dt);
 	renderGizmos(g_PhysicsScene);
 	if (glfwGetKey(m_window, GLFW_KEY_F) != GLFW_PRESS && glfwGetKey(m_window, GLFW_KEY_G) != GLFW_PRESS)
 	{
@@ -198,9 +235,7 @@ void Physics::draw()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_CULL_FACE);
     Gizmos::draw(m_camera.proj, m_camera.view);
-	
     m_renderer->RenderAndClear(m_camera.view_proj);
-
     glfwSwapBuffers(m_window);
     glfwPollEvents();
 }
@@ -371,54 +406,113 @@ void Physics::CreateJoint(PhysicsObject* _obj1, PhysicsObject* _obj2)
 	m_PhysScene->AddActor(_joint);
 }
 
-PxCloth * Physics::CreateCloth(const glm::vec3 & _pos, unsigned int & _vertCount, unsigned int & _indexCount, const glm::vec3 * _verts, unsigned int * _indices)
+//PxCloth * Physics::CreateCloth(const glm::vec3 & _pos, unsigned int & _vertCount, unsigned int & _indexCount, const glm::vec3 * _verts, unsigned int * _indices)
+//{
+//
+//	// cook the geometry into fabric
+//
+//
+//	PxCooking* pCook;
+//
+//	PxClothFabric* pFab = PxClothFabricCreate( *g_Physics, _clothDesc, PxVec3(0,-1,0));
+//
+//	m_Cloth = g_Physics->createCloth(PxTransform(PxIdentity), *pFab,  PxClothFlags());
+//
+//
+//	if (g_ClothCooker->cookClothFabric(_clothDesc, PxVec3(0, -9.8f, 0), buf) == false)
+//	{
+//		return nullptr;
+//	}
+//	MemoryInputData data(buf.getData(), buf.getSize());
+//	PxClothFabric* fabric = g_Physics->createClothFabric(data);
+//	// set up the particles for each vertex
+//	PxClothParticle* particles = new PxClothParticle[_vertCount];
+//	for (unsigned int i = 0; i < _vertCount; ++i)
+//	{
+//		particles[i].pos = PxVec3(_verts[i].x, _verts[i].y, _verts[i].z);
+//		// set weights (0 means static)
+//		if (_verts[i].x == _pos.x)
+//			particles[i].invWeight = 0.0f;
+//		else
+//			particles[i].invWeight = 1.0f;
+//	}
+//	// create the cloth then setup the spring properties
+//	PxCloth* cloth = g_Physics->createCloth(PxTransform(PxVec3(_pos.x,
+//		_pos.y, _pos.z)),
+//		*fabric, particles, PxClothCollisionData(), PxClothFlag::eSWEPT_CONTACT);
+//	// we need to set some solver configurations
+//	if (cloth != nullptr)
+//	{
+//		PxClothPhaseSolverConfig bendCfg;
+//		bendCfg.solverType = PxClothPhaseSolverConfig::eFAST;
+//		bendCfg.stiffness = 1.0f;
+//		bendCfg.stretchStiffness = 0.5f;
+//		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eBENDING, bendCfg);
+//		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eSTRETCHING, bendCfg); // stretching
+//		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eSHEARING, bendCfg);
+//		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eHORIZONTAL, // horiz stretch
+//			bendCfg);
+//		cloth->setDampingCoefficient(0.125f);
+//	}
+//	delete[] particles;
+//	return cloth;
+//}
+
+void Physics::MakeCharController()
 {
-	// set up the cloth description
-	PxClothMeshDesc clothDesc;
-	clothDesc.setToDefault();
-	clothDesc.points.count = _vertCount;
-	clothDesc.triangles.count = _indexCount / 3;
-	clothDesc.points.stride = sizeof(glm::vec3);
-	clothDesc.triangles.stride = sizeof(unsigned int) * 3;
-	clothDesc.points.data = _verts;
-	clothDesc.triangles.data = _indices;
-	// cook the geometry into fabric
-	MemoryOutputStream buf;
-	if (g_PhysicsCooker->cookClothFabric(clothDesc, PxVec3(0, -9.8f, 0), buf) == false)
+	m_HitReport = new MyControllerHitReport();
+
+	g_CharManager = PxCreateControllerManager(*g_PhysicsScene);
+
+	PxCapsuleControllerDesc _desc;
+	_desc.height = 1.6f;
+	_desc.radius = 0.4f;
+	_desc.position.set(0, 0, 0);
+	_desc.material = g_PhysicsMaterial;
+	_desc.reportCallback = m_HitReport; //connect it to our collision detection routine
+	_desc.density = 10;
+
+	g_PlayerController = g_CharManager->createController(_desc);
+	g_PlayerController->setPosition(PxExtendedVec3(5,2,5));
+	m_YVel = 0;
+	m_Rotation = 0;
+	m_Grav = -0.5f;
+	m_HitReport->clearPlayerContactNormal();
+	g_PhysicsScene->addActor(*g_PlayerController->getActor());
+}
+
+void Physics::UpdateChar(float _deltaTime)
+{
+	if (m_HitReport->getPlayerContactNormal().y > 0.3f)
 	{
-		return nullptr;
+		m_YVel = -0.1f;
+		m_HitReport->m_Grounded = true;
 	}
-	MemoryInputData data(buf.getData(), buf.getSize());
-	PxClothFabric* fabric = g_Physics->createClothFabric(data);
-	// set up the particles for each vertex
-	PxClothParticle* particles = new PxClothParticle[_vertCount];
-	for (unsigned int i = 0; i < _vertCount; ++i)
+	else
 	{
-		particles[i].pos = PxVec3(_verts[i].x, _verts[i].y, _verts[i].z);
-		// set weights (0 means static)
-		if (_verts[i].x == _pos.x)
-			particles[i].invWeight = 0;
-		else
-			particles[i].invWeight = 1.f;
+		m_YVel += -0.5f * _deltaTime;
+		m_HitReport->m_Grounded = false;
 	}
-	// create the cloth then setup the spring properties
-	PxCloth* cloth = g_Physics->createCloth(PxTransform(PxVec3(_pos.x,
-		_pos.y, _pos.z)),
-		*fabric, particles, PxClothCollisionData(), PxClothFlag::eSWEPT_CONTACT);
-	// we need to set some solver configurations
-	if (cloth != nullptr)
-	{
-		PxClothPhaseSolverConfig bendCfg;
-		bendCfg.solverType = PxClothPhaseSolverConfig::eFAST;
-		bendCfg.stiffness = 1;
-		bendCfg.stretchStiffness = 0.5;
-		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eBENDING, bendCfg);
-		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eSTRETCHING, bendCfg);
-		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eSHEARING, bendCfg);
-		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eSTRETCHING_HORIZONTAL,
-			bendCfg);
-		cloth->setDampingCoefficient(0.125f);
-	}
-	delete[] particles;
-	return cloth;
+
+	m_HitReport->clearPlayerContactNormal();
+	const PxVec3 up(0, 1, 0);
+	//scan the keys and set up our intended velocity based on a global transform
+	PxVec3 velocity(0, m_YVel, 0);
+	if (glfwGetKey(m_window, GLFW_KEY_UP) == GLFW_PRESS)
+		velocity.x -= m_MovSpeed * _deltaTime;
+	if (glfwGetKey(m_window, GLFW_KEY_DOWN) == GLFW_PRESS)
+		velocity.x += m_MovSpeed * _deltaTime;
+	if (glfwGetKey(m_window, GLFW_KEY_LEFT) == GLFW_PRESS)
+		velocity.z += m_MovSpeed * _deltaTime;
+	if (glfwGetKey(m_window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+		velocity.z -= m_MovSpeed * _deltaTime;
+	if (glfwGetKey(m_window, GLFW_KEY_SPACE))
+		velocity.y += (m_MovSpeed * 2) * _deltaTime;
+
+	float minDistance = 0.001f;
+	PxControllerFilters filter;
+	//make controls relative to player facing
+	PxQuat rotation(m_Rotation, PxVec3(0, 1, 0));
+	//move the controller
+	g_PlayerController->move(rotation.rotate(velocity), minDistance, _deltaTime, filter);
 }
