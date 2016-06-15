@@ -8,7 +8,7 @@ using namespace std;
 
 std::string Resource::ImportShader(const char* _name)
 {
-	std::string _fullpath = Resource::GetResourcePath() + _ShaderPath + _name + ".shader";
+	std::string _fullpath = Resource::GetResourcePath() + _ShaderPath + _name + ".glsl";
 
 	std::ifstream _file;
 	std::stringstream _stream;

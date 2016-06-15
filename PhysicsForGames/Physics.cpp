@@ -10,6 +10,56 @@
 #define Assert(val) if (val){}else{ *((char*)0) = 0;}
 #define ArrayCount(val) (sizeof(val)/sizeof(val[0]))
 
+void SetShapeAsTrigger(PxRigidActor* actorIn)
+{
+	PxRigidStatic* staticActor = actorIn->is<PxRigidStatic>();
+	assert(staticActor);
+	const PxU32 numShapes = staticActor->getNbShapes();
+	PxShape** shapes = (PxShape**)_aligned_malloc(sizeof(PxShape*)*numShapes, 16);
+	staticActor->getShapes(shapes, numShapes);
+	for (PxU32 i = 0; i < numShapes; i++)
+	{
+		shapes[i]->setFlag(PxShapeFlag::eSIMULATION_SHAPE, false);
+		shapes[i]->setFlag(PxShapeFlag::eTRIGGER_SHAPE, true);
+	}
+}
+
+void SetupFiltering(PxRigidActor* actor, PxU32 filterGroup, PxU32 filterMask)
+{
+	PxFilterData filterData;
+	filterData.word0 = filterGroup; // word0 = own ID
+	filterData.word1 = filterMask; // word1 = ID mask to filter pairs that trigger a contact callback;
+	const PxU32 numShapes = actor->getNbShapes();
+	PxShape** shapes = (PxShape**)_aligned_malloc(sizeof(PxShape*)*numShapes, 16);
+	actor->getShapes(shapes, numShapes);
+	for (PxU32 i = 0; i < numShapes; i++)
+	{
+		PxShape* shape = shapes[i];
+		shape->setSimulationFilterData(filterData);
+	}
+	_aligned_free(shapes);
+}PxFilterFlags FilterShader(PxFilterObjectAttributes attributes0, PxFilterData filterData0,
+	PxFilterObjectAttributes attributes1, PxFilterData filterData1,
+	PxPairFlags& pairFlags, const void* constantBlock, PxU32 constantBlockSize)
+{
+	// let triggers through
+	if (PxFilterObjectIsTrigger(attributes0) ||
+		PxFilterObjectIsTrigger(attributes1))
+	{
+		pairFlags = PxPairFlag::eTRIGGER_DEFAULT;
+		return PxFilterFlag::eDEFAULT;
+	}
+	// generate contacts for all that were not filtered above
+	pairFlags = PxPairFlag::eCONTACT_DEFAULT;
+	// trigger the contact callback for pairs (A,B) where
+	// the filtermask of A contains the ID of B and vice versa.
+	if ((filterData0.word0 & filterData1.word1) &&
+		(filterData1.word0 & filterData0.word1))
+		pairFlags |= PxPairFlag::eNOTIFY_TOUCH_FOUND |
+		PxPairFlag::eNOTIFY_TOUCH_LOST;
+	return PxFilterFlag::eDEFAULT;
+}
+
 bool Physics::startup()
 {
     if (Application::startup() == false)
@@ -30,7 +80,7 @@ bool Physics::startup()
 	Physics::setUpPhysX();
 	//Physics::setUpVisualDebugger();
 	Physics::addPlane();
-	//Physics::addBox();
+	Physics::addBox();
 	Physics::addCapsule();
 
 
@@ -89,18 +139,21 @@ void Physics::setUpPhysX()
 	g_PhysicsScene = g_Physics->createScene(sceneDesc);
 
 	Ragdoll* _ragdoll = new Ragdoll();
-	PxArticulation* _ragdollArticulation;
-	_ragdollArticulation = _ragdoll->MakeRagdoll(g_Physics, _ragdoll->ragdollData, PxTransform(PxVec3(0, 20, 0)), .1f, g_PhysicsMaterial);
-	g_PhysicsScene->addArticulation(*_ragdollArticulation);
-	_ragdollArticulation->putToSleep();
+	m_Ragdoll = _ragdoll->MakeRagdoll(g_Physics, _ragdoll->ragdollData, PxTransform(PxVec3(0, 20, 0)), .1f, g_PhysicsMaterial);
+	g_PhysicsScene->addArticulation(*m_Ragdoll);
+	m_Ragdoll->putToSleep();
 
 	MakeCharController();
 
 
 	m_MyCloth = new PhysXCloth();
-	
 	m_Cloth = m_MyCloth->SetupCloth(g_Physics);
 	g_PhysicsScene->addActor(*m_Cloth);
+
+
+	m_Callback = new CollisionCallbacks();
+	g_PhysicsScene->setSimulationEventCallback(m_Callback);
+
 	//m_Cloth = CreateCloth(glm::vec3(0, 20, 0), 10, indicies);
 	//g_PhysicsScene->addActor(*m_Cloth);
 	//delete[] clothTexCoords;
@@ -116,16 +169,24 @@ void Physics::updatePhysX(float _deltaTime)
 
 	if (glfwGetKey(m_window, GLFW_KEY_V) == GLFW_PRESS)
 	{
-		PxSphereGeometry _sphere(0.5f);
-		float _density = 10;
+		PxSphereGeometry _sphere(1.5f);
+		float _density = 0.5;
+		PxReal _mass = 10.0f;
 		PxTransform _trans (PxVec3(m_camera.GetPosition().x, m_camera.GetPosition().y, m_camera.GetPosition().z));
 
 		PxRigidDynamic* _actor = PxCreateDynamic(*g_Physics, _trans, _sphere, *g_PhysicsMaterial, _density);
+		_actor->setMass(_mass);
 		glm::vec3 _dir(-m_camera.world[2]);
 		PxVec3 _vel = PxVec3(_dir.x, _dir.y, _dir.z) * 2;
 		_actor->setLinearVelocity(_vel, true);
 		g_PhysicsScene->addActor(*_actor);
 	}
+
+	if (m_Callback->IsTriggered() && m_Ragdoll->isSleeping())
+		m_Ragdoll->wakeUp();
+	else if(!m_Callback->IsTriggered() && !m_Ragdoll->isSleeping())
+		m_Ragdoll->putToSleep();
+
 
 	while (g_PhysicsScene->fetchResults() == false)
 	{
@@ -151,12 +212,17 @@ void Physics::addBox()
 {
 	float density = 10.0f;
 	PxBoxGeometry box(2, 2, 2);
-	PxTransform transform(PxVec3(0, 10, 0));
+	PxTransform transform(PxVec3(10, 0, 10));
 	PxRigidDynamic* dynamicActor = PxCreateDynamic(*g_Physics, transform, box, *g_PhysicsMaterial, density);
 	g_PhysicsScene->addActor(*dynamicActor);
 
 	PxRigidStatic* _staticActor = PxCreateStatic(*g_Physics, PxTransform(PxVec3(0, 2, 0)), box, *g_PhysicsMaterial);
 	g_PhysicsScene->addActor(*_staticActor);
+
+	PxRigidStatic* _staticActor1 = PxCreateStatic(*g_Physics, PxTransform(PxVec3(-10, 2, -10)), box, *g_PhysicsMaterial);
+	SetShapeAsTrigger(_staticActor1);
+	SetupFiltering(_staticActor1, FilterGroup::eGROUND, FilterGroup::ePLAYER);
+	g_PhysicsScene->addActor(*_staticActor1);
 } // PhysX
 
 void Physics::addCapsule()
@@ -234,6 +300,7 @@ void Physics::draw()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_CULL_FACE);
+	m_MyCloth->Render(m_camera.view, m_camera.proj);
     Gizmos::draw(m_camera.proj, m_camera.view);
     m_renderer->RenderAndClear(m_camera.view_proj);
     glfwSwapBuffers(m_window);
@@ -289,7 +356,7 @@ void Physics::renderGizmos(PxScene* physics_scene)
     PxActor** actor_list = new PxActor*[actor_count];
 	physics_scene->getActors(desiredTypes, actor_list, actor_count);
     
-    vec4 geo_color(1, 0, 0, 1);
+    vec4 geo_color(0, 1, 0, 1);
     for (int actor_index = 0;
         actor_index < (int)actor_count;
         ++actor_index)
@@ -406,58 +473,6 @@ void Physics::CreateJoint(PhysicsObject* _obj1, PhysicsObject* _obj2)
 	m_PhysScene->AddActor(_joint);
 }
 
-//PxCloth * Physics::CreateCloth(const glm::vec3 & _pos, unsigned int & _vertCount, unsigned int & _indexCount, const glm::vec3 * _verts, unsigned int * _indices)
-//{
-//
-//	// cook the geometry into fabric
-//
-//
-//	PxCooking* pCook;
-//
-//	PxClothFabric* pFab = PxClothFabricCreate( *g_Physics, _clothDesc, PxVec3(0,-1,0));
-//
-//	m_Cloth = g_Physics->createCloth(PxTransform(PxIdentity), *pFab,  PxClothFlags());
-//
-//
-//	if (g_ClothCooker->cookClothFabric(_clothDesc, PxVec3(0, -9.8f, 0), buf) == false)
-//	{
-//		return nullptr;
-//	}
-//	MemoryInputData data(buf.getData(), buf.getSize());
-//	PxClothFabric* fabric = g_Physics->createClothFabric(data);
-//	// set up the particles for each vertex
-//	PxClothParticle* particles = new PxClothParticle[_vertCount];
-//	for (unsigned int i = 0; i < _vertCount; ++i)
-//	{
-//		particles[i].pos = PxVec3(_verts[i].x, _verts[i].y, _verts[i].z);
-//		// set weights (0 means static)
-//		if (_verts[i].x == _pos.x)
-//			particles[i].invWeight = 0.0f;
-//		else
-//			particles[i].invWeight = 1.0f;
-//	}
-//	// create the cloth then setup the spring properties
-//	PxCloth* cloth = g_Physics->createCloth(PxTransform(PxVec3(_pos.x,
-//		_pos.y, _pos.z)),
-//		*fabric, particles, PxClothCollisionData(), PxClothFlag::eSWEPT_CONTACT);
-//	// we need to set some solver configurations
-//	if (cloth != nullptr)
-//	{
-//		PxClothPhaseSolverConfig bendCfg;
-//		bendCfg.solverType = PxClothPhaseSolverConfig::eFAST;
-//		bendCfg.stiffness = 1.0f;
-//		bendCfg.stretchStiffness = 0.5f;
-//		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eBENDING, bendCfg);
-//		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eSTRETCHING, bendCfg); // stretching
-//		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eSHEARING, bendCfg);
-//		cloth->setPhaseSolverConfig(PxClothFabricPhaseType::eHORIZONTAL, // horiz stretch
-//			bendCfg);
-//		cloth->setDampingCoefficient(0.125f);
-//	}
-//	delete[] particles;
-//	return cloth;
-//}
-
 void Physics::MakeCharController()
 {
 	m_HitReport = new MyControllerHitReport();
@@ -478,6 +493,7 @@ void Physics::MakeCharController()
 	m_Rotation = 0;
 	m_Grav = -0.5f;
 	m_HitReport->clearPlayerContactNormal();
+	SetupFiltering(g_PlayerController->getActor(), FilterGroup::ePLAYER, FilterGroup::eGROUND);
 	g_PhysicsScene->addActor(*g_PlayerController->getActor());
 }
 

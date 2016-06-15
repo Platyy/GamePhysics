@@ -22,7 +22,10 @@ public:
 	unsigned int m_ClothVertexCount;
 	unsigned int m_ClothVAO, m_ClothVBO, m_ClothTextureVBO, m_ClothIBO;
 
+	
+
 	glm::vec3* m_ClothPositions;
+	physx::PxCloth* m_cloth;
 
 
 	void Render(glm::mat4 _camMatrix, glm::mat4 _projMatrix);

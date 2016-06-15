@@ -1,7 +1,6 @@
 #include "PhysXCloth.h"
 
 
-
 PhysXCloth::PhysXCloth()
 {
 }
@@ -14,11 +13,11 @@ PhysXCloth::~PhysXCloth()
 PxCloth* PhysXCloth::SetupCloth(PxPhysics* g_physics)
 {
 	float _springSize = 0.2f;
-	unsigned int _springRows = 40;
-	unsigned int _springCols = 40;
+	unsigned int _springRows = 128;
+	unsigned int _springCols = 72;
 
 	// top middle
-	glm::vec3 _clothPos = glm::vec3(0, 12, 0);
+	glm::vec3 _clothPos = glm::vec3(-10, 20, -10);
 
 	float _halfWidth = _springRows * _springSize * 0.5f;
 
@@ -65,6 +64,45 @@ PxCloth* PhysXCloth::SetupCloth(PxPhysics* g_physics)
 		}
 	}
 
+	unsigned int vs = glCreateShader(GL_VERTEX_SHADER);
+	unsigned int fs = glCreateShader(GL_FRAGMENT_SHADER);
+
+	std::string vsSource = Resource::ImportShader("basicV");
+	std::string fsSource = Resource::ImportShader("basicF");
+
+	const GLchar* _vsCode = vsSource.c_str();
+	const GLchar* _fsCode = fsSource.c_str();
+
+	glShaderSource(vs, 1, &_vsCode, 0);
+	glCompileShader(vs);
+
+	glShaderSource(fs, 1, &_fsCode, 0);
+	glCompileShader(fs);
+
+	m_ShaderID = glCreateProgram();
+	glAttachShader(m_ShaderID, vs);
+	glAttachShader(m_ShaderID, fs);
+	glBindAttribLocation(m_ShaderID, 0, "position");
+	glBindAttribLocation(m_ShaderID, 1, "texCoords");
+	glLinkProgram(m_ShaderID);
+
+	int success = GL_FALSE;
+	glGetProgramiv(m_ShaderID, GL_LINK_STATUS, &success);
+	if (success == GL_FALSE)
+	{
+		int infoLogLength = 0;
+		glGetShaderiv(m_ShaderID, GL_INFO_LOG_LENGTH, &infoLogLength);
+		char* infoLog = new char[infoLogLength];
+
+		glGetShaderInfoLog(m_ShaderID, infoLogLength, 0, infoLog);
+		printf("Error: Failed to link Gizmo shader program!\n%s\n", infoLog);
+		delete[] infoLog;
+	}
+
+	glDeleteShader(vs);
+	glDeleteShader(fs);
+
+
 	glGenBuffers(1, &m_ClothVBO);
 	glGenBuffers(1, &m_ClothTextureVBO);
 	glGenBuffers(1, &m_ClothIBO);
@@ -87,9 +125,12 @@ PxCloth* PhysXCloth::SetupCloth(PxPhysics* g_physics)
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec2), 0);
 
+
 	glBindVertexArray(0);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+	m_TextureID = LoadGLTextureBasic("./data/stalin.jpg");
 
 	// set up the cloth description
 	PxClothMeshDesc _clothDesc;
@@ -103,7 +144,8 @@ PxCloth* PhysXCloth::SetupCloth(PxPhysics* g_physics)
 
 	PxDefaultMemoryOutputStream buf;
 	bool cooked = false;
-	PxClothFabricCooker(_clothDesc, PxVec3(0, -9.81, 0), false).save(buf, cooked);
+	PxClothFabricCooker cooker(_clothDesc, PxVec3(0, -1, 0), false);
+	cooker.save(buf, cooked);
 	if (cooked)
 		return nullptr;
 
@@ -121,46 +163,27 @@ PxCloth* PhysXCloth::SetupCloth(PxPhysics* g_physics)
 
 	}
 
-	PxCloth* cloth = g_physics->createCloth(PxTransform(PxVec3(0, 0, 0)),
+	m_cloth = g_physics->createCloth(PxTransform(PxVec3(0, 0, 0)),
 		*fab, particles, PxClothFlag::eSWEPT_CONTACT);
 
-	cloth->addCollisionPlane(PxClothCollisionPlane());
 
-	if (cloth != nullptr)
+	if (m_cloth != nullptr)
 	{
 		PxClothStretchConfig bendCfg;
 		bendCfg.stiffness = 1;
 		bendCfg.stretchLimit = 1.0f;
-		cloth->setStretchConfig(PxClothFabricPhaseType::eBENDING, bendCfg);
-		cloth->setStretchConfig(PxClothFabricPhaseType::eVERTICAL, bendCfg);
-		cloth->setStretchConfig(PxClothFabricPhaseType::eSHEARING, bendCfg);
-		cloth->setStretchConfig(PxClothFabricPhaseType::eHORIZONTAL, bendCfg);
-		cloth->setDampingCoefficient(PxVec3(0.125f));
+		m_cloth->setStretchConfig(PxClothFabricPhaseType::eBENDING, bendCfg);
+		m_cloth->setStretchConfig(PxClothFabricPhaseType::eVERTICAL, bendCfg);
+		m_cloth->setStretchConfig(PxClothFabricPhaseType::eSHEARING, bendCfg);
+		m_cloth->setStretchConfig(PxClothFabricPhaseType::eHORIZONTAL, bendCfg);
+		m_cloth->setDampingCoefficient(PxVec3(0.125f));
 	}
 
+	m_cloth->setClothFlag(PxClothFlag::eSCENE_COLLISION, true);
 	delete[] particles;
-
-	delete[] m_ClothPositions;
+	delete[] _clothTexCoords;
 	delete[] indices;
-	return cloth;
-
-
-
-
-
-
-
-	//std::string vs = Resource::ImportShader("basicV");
-	//const char* vsSource = vs.c_str();
-	//std::string fs = Resource::ImportShader("basicF");
-	//const char* fsSource = fs.c_str();
-	//m_ShaderID = CreateProgram(vs, 0, 0, 0, fs);
-	//
-	//glDeleteShader(vs);
-	//glDeleteShader(fs);
-	//
-	//m_TextureID = LoadTexture(".. / .. / Build / Textures / cloth.png");
-
+	return m_cloth;
 }
 
 void PhysXCloth::Render(glm::mat4 _camMatrix, glm::mat4 _projMatrix)
@@ -168,146 +191,31 @@ void PhysXCloth::Render(glm::mat4 _camMatrix, glm::mat4 _projMatrix)
 	// clear the backbuffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	// get the view matrix from the world-space camera matrix
-	glm::mat4 viewMatrix = glm::inverse(_camMatrix);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	// bind shader and transforms, along with texture
 	glUseProgram(m_ShaderID);
 	int location = glGetUniformLocation(m_ShaderID, "projectionView");
-	glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(_projMatrix * viewMatrix));
+	glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(_projMatrix * _camMatrix));
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, m_TextureID);
+
+	PxClothParticleData* data = m_cloth->lockParticleData(PxDataAccessFlag::eREADABLE);
+	for (PxU32 i = 0, n = m_cloth->getNbParticles(); i < n; ++i)
+	{
+		PxVec3 pos = data->particles[i].pos;
+		m_ClothPositions[i] = glm::vec3(pos.x, pos.y, pos.z);
+
+	}
+	data->unlock();
+
 	// update vertex positions from the cloth
 	glBindBuffer(GL_ARRAY_BUFFER, m_ClothVBO);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, m_ClothVertexCount * sizeof(glm::vec3),
-		m_ClothPositions);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, m_ClothVertexCount * sizeof(glm::vec3), m_ClothPositions);
 	// disable face culling so that we can draw it double-sided
 	glDisable(GL_CULL_FACE);
 	// bind and draw the cloth
 	glBindVertexArray(m_ClothVAO);
 	glDrawElements(GL_TRIANGLES, m_ClothIndexCount, GL_UNSIGNED_INT, 0);
 	glEnable(GL_CULL_FACE);
-	// draw the gizmos from this frame
-	Gizmos::draw(viewMatrix, _projMatrix);
+	glUseProgram(0);
 }
-//
-//bool LoadShaderType(char* filename, GLenum shader_type,	unsigned int* output)
-//{
-//	//we want to be able to return if we succeded
-//	bool succeeded = true;
-//
-//	//open the shader file
-//	FILE* shader_file = fopen(filename, "r");
-//
-//	//did it open successfully 
-//	if (shader_file == 0)
-//	{
-//		succeeded = false;
-//	}
-//	else
-//	{
-//		//find out how long the file is
-//		fseek(shader_file, 0, SEEK_END);
-//		int shader_file_length = ftell(shader_file);
-//		fseek(shader_file, 0, SEEK_SET);
-//		//allocate enough space for the file
-//		char *shader_source = new char[shader_file_length];
-//		//read the file and update the length to be accurate
-//		shader_file_length = fread(shader_source, 1, shader_file_length, shader_file);
-//
-//		//create the shader based on the type that got passed in
-//		unsigned int shader_handle = glCreateShader(shader_type);
-//		//compile the shader
-//		glShaderSource(shader_handle, 1, &shader_source, &shader_file_length);
-//		glCompileShader(shader_handle);
-//
-//		//chech the shader for errors
-//		int success = GL_FALSE;
-//		glGetShaderiv(shader_handle, GL_COMPILE_STATUS, &success);
-//		if (success == GL_FALSE)
-//		{
-//			int log_length = 0;
-//			glGetShaderiv(shader_handle, GL_INFO_LOG_LENGTH, &log_length);
-//			char* log = new char[log_length];
-//			glGetShaderInfoLog(shader_handle, log_length, NULL, log);
-//			printf("%s\n", log);
-//			delete[] log;
-//			succeeded = false;
-//		}
-//		//only give the result to the caller if we succeeded
-//		if (succeeded)
-//		{
-//			*output = shader_handle;
-//		}
-//
-//		//clean up the stuff we allocated
-//		delete[] shader_source;
-//		fclose(shader_file);
-//	}
-//
-//	return succeeded;
-//}
-//
-//bool LoadShader(char* vertex_filename, char* geometry_filename,	char* fragment_filename, GLuint* result)
-//{
-//	bool succeeded = true;
-//
-//	*result = glCreateProgram();
-//
-//	unsigned int vertex_shader;
-//
-//	if (LoadShaderType(vertex_filename, GL_VERTEX_SHADER, &vertex_shader))
-//	{
-//		glAttachShader(*result, vertex_shader);
-//		glDeleteShader(vertex_shader);
-//	}
-//	else
-//	{
-//		printf("FAILED TO LOAD VERTEX SHADER\n");
-//	}
-//
-//	if (geometry_filename != nullptr)
-//	{
-//		unsigned int geometry_shader;
-//		if (LoadShaderType(geometry_filename, GL_GEOMETRY_SHADER, &geometry_shader))
-//		{
-//			glAttachShader(*result, geometry_shader);
-//			glDeleteShader(geometry_shader);
-//		}
-//		else
-//		{
-//			printf("FAILED TO LOAD GEOMETRY SHADER\n");
-//		}
-//	}
-//	if (fragment_filename != nullptr)
-//	{
-//		unsigned int fragment_shader;
-//		if (LoadShaderType(fragment_filename, GL_FRAGMENT_SHADER, &fragment_shader))
-//		{
-//			glAttachShader(*result, fragment_shader);
-//			glDeleteShader(fragment_shader);
-//		}
-//		else
-//		{
-//			printf("FAILED TO LOAD FRAGMENT SHADER\n");
-//		}
-//	}
-//
-//	glLinkProgram(*result);
-//
-//	GLint success;
-//	glGetProgramiv(*result, GL_LINK_STATUS, &success);
-//	if (success == GL_FALSE)
-//	{
-//		GLint log_length;
-//		glGetProgramiv(*result, GL_INFO_LOG_LENGTH, &log_length);
-//		char* log = new char[log_length];
-//		glGetProgramInfoLog(*result, log_length, 0, log);
-//
-//		printf("ERROR: STUFF DONE SCREWED UP IN UR SHADER BUDDY!\n\n");
-//		printf("%s", log);
-//
-//		delete[] log;
-//		succeeded = false;
-//	}
-//
-//	return succeeded;
-//}

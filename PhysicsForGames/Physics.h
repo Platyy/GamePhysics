@@ -6,6 +6,7 @@
 #include "Render.h"
 #include "PhysicScene.h"
 #include "Ragdoll.h"
+#include "CollisionCallbacks.h"
 #include "MyControllerHitReport.h"
 
 #include <streambuf>
@@ -19,7 +20,8 @@ using namespace physx;
 class Physics : public Application
 {
 public:
-	
+	PxArticulation* m_Ragdoll;
+	CollisionCallbacks* m_Callback;
 	PhysicScene* m_PhysScene;
 	PxCloth* m_Cloth;
 	PhysXCloth* m_MyCloth;
@@ -84,6 +86,17 @@ public:
 	float m_RotSpeed = 1.0f;
 
 	void UpdateChar(float _deltaTime);
+
+};
+
+struct FilterGroup
+{
+	enum Enum
+	{
+		ePLAYER = (1 << 0),
+		ePLATFORM = (1 << 1),
+		eGROUND = (1 << 2)
+	};
 };
 
 class MyAllocator : public PxAllocatorCallback

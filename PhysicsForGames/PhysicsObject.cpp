@@ -119,7 +119,7 @@ BoxClass::BoxClass(glm::vec3 _position, glm::vec3 _extents, DIYRigidBody * _rigi
 
 void BoxClass::MakeGizmo()
 {
-	Gizmos::addAABBFilled(m_Position, m_Extents, glm::vec4(0, 0.5f, 0, 1));
+	Gizmos::addAABBFilled(m_Position, m_Extents, glm::vec4(1, 0, 0, 1));
 }
 
 //### JOINT ###

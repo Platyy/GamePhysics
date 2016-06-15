@@ -5,6 +5,6 @@ out vec2 textureCoords;
 uniform mat4 projectionView;
 void main()
 {
-textureCoords = texCoords;
-gl_Position = projectionView * vec4(position,1);
+	textureCoords = texCoords;
+	gl_Position = projectionView * vec4(position,1);
 }
